@@ -1,0 +1,289 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{geometry}
+
+\title{Social Norms}
+
+\date{December 2025}
+
+\geometry{a4paper, margin=1in}
+
+\title{10: Detecting Norm-Type Drift and Adversarial Manipulation of the Norm Manifold}
+\date{}
+
+\begin{document}
+
+\section*{10  Detecting Norm-Type Drift and Adversarial Manipulation of the Norm Manifold }
+\textcolor{red}{(this is on-going work)} \\
+
+The previous section focused on updates to the explicit norm corpus, expanding it when new implicit norms appear. This section concerns detecting when the norm manifold itself is being manipulated, either slowly by cultural changes or abruptly by adversarial attacks designed to shift semantic or evaluative centroids. \\
+
+A threat exists when an attacker introduces text into the target corpus that is crafted to shift the system’s embedding space or stance distributions. \\
+
+Such attacks seek to:
+\begin{itemize}
+    \item alter the semantic centroids of norm clusters,
+    \item warp stance vectors associated with certain clusters,
+    \item inflate or deflate entropy measures (making norms seem more ambiguous or more stable than they are), \textcolor{red}{(keep this here?)} 
+    \item cause misclassification of new implicit norms,\textcolor{red}{(?)} 
+    \item or manipulate the emergence of ``new'' norm types that reflect the attacker’s agenda.
+\end{itemize}
+
+This section defines norm-type drift, formalizes several attack vectors, and then proposes statistical and representational diagnostics that reveal when norm types are changing in suspicious, abrupt, or inconsistent ways.
+
+\subsection*{10.1  Formalizing Norm-Type Drift}
+
+Let each explicit norm type \( T_k \) have centroids:
+\[
+\mu_k^{(e)},\; \mu_k^{(s)},\; \mu_k^{(\text{repr})},\; \mu_k^{(\text{mask})}
+\]
+as introduced in section 4. \\
+
+Over time, as the target corpus \( C^{(T)} \) evolves, we may detect shifts in the distribution of implicit sentences aligned with type \(k\). Let:
+\[
+\tilde{\mu}_k^{(e)}(t),\; \tilde{\mu}_k^{(s)}(t),\; \tilde{\mu}_k^{(\text{repr})}(t),\; \tilde{\mu}_k^{(\text{mask})}(t)
+\]
+denote implicit centroids computed from target data in a sliding time window \( t \). \\
+
+Define drift as the discrepancy:
+\[
+\Delta_k^{(*)}(t) = \bigl\| \tilde{\mu}_k^{(*)}(t) - \mu_k^{(*)} \bigr\|
+\]
+where \( * \in \{e, s, \text{repr}, \text{mask} \} \).  \\
+
+Norm-type drift occurs when:
+\[
+\Delta_k^{(*)}(t) > \tau_{\text{drift}}
+\]
+or when the direction of drift is inconsistent with historical patterns. \\
+
+Two causes might exist:
+
+\begin{enumerate}
+    \item Natural drift: cultural or contextual changes reflected by media in corpora.
+    \item Adversarial drift: coordinated injections of crafted text meant to distort the manifold.
+\end{enumerate}
+
+This section focuses on detecting the adversarial drift.
+
+\subsection*{10.2  Attacks on Norm Types}
+Attacks seek to manipulate the representation of explicit or implicit norms so that the system’s understanding of these norms changes.
+
+\subsubsection*{10.2.1  Embedding Space Attacks}
+The attacker injects sentences engineered to shift semantic embeddings.\\
+
+Goal:
+\begin{itemize}
+    \item Move the semantic centroid \( \tilde{\mu}_k^{(e)} \) so that the meaning of a norm type becomes associated with a different concept \\
+    (e.g., ``non-violence'' fused with ``defund the police'' - \textcolor{red}{is this a good example?}). \\
+\end{itemize} 
+
+Mechanism:
+\begin{itemize}
+    \item Generate high-density paraphrases positioned near a targeted subregion in embedding space.
+    \item Use lexical diversity to evade deduplication but maintain directional semantic pressure. \\
+\end{itemize}
+
+Impact: \textcolor{red}{(the norm is changing)}
+\begin{itemize}
+    \item The system begins matching unrelated implicit sentences to the wrong norm type.
+    \item New explicit-corpus updates (described in section 9) may incorrectly incorporate corrupted norms. \\
+\end{itemize}
+
+\subsubsection*{10.2.2  Stance Vector Attacks}
+The attacker crafts sentences with normative evaluations that aim to change a norm’s stance centroid:
+\[
+\mu_k^{(s)}.
+\]
+
+Examples:
+\begin{itemize}
+    \item Writing many texts implying approval of actions normally considered harmful.
+    \item Embedding praise/blame constructions around edge-case scenarios. \\
+\end{itemize}
+
+Impact: \textcolor{red}{(the norm is changing)}
+\begin{itemize}
+    \item Norm clusters appear to shift from obligation to permission, or from disapproval to neutrality.
+    \item Masked completions may begin predicting atypical evaluative words.\\
+\end{itemize}
+
+\subsubsection*{10.2.3  Entropy Modulation Attacks} 
+
+Two subtypes exist:
+
+\subsubsection*{(a) Entropy inflation}
+Produce contradictory, ambiguous, or paradoxical text so that:
+\[
+\tilde{\mu}_k^{(\text{repr})},\;\tilde{\mu}_k^{(\text{mask})}
+\]
+increase. \\
+
+Impact: \textcolor{red}{(the norm is changing)}
+\begin{itemize}
+    \item Norm type appears unstable or contested.
+    \item Implicit norm detector becomes less confident and may fail to identify norms.
+\end{itemize}
+
+\subsubsection*{(b) Entropy suppression}
+Craft sentences with artificially strong cues (e.g., exaggerated adjectives) to induce very low entropy. \\
+
+Impact: \textcolor{red}{(the norm is changing)}
+\begin{itemize}
+    \item Misleads the probe into believing the norm implication is stable and widely accepted.
+\end{itemize}
+
+\subsubsection*{10.2.4  Fake Norm Emergence Attacks}
+The attacker fabricates a dense cluster of implicit sentences representing a ``new norm type'' that does not actually exist. \\
+
+Mechanism:
+\begin{itemize}
+    \item Produce many semantically similar, normative sentences (e.g., ``It is honorable to leak confidential user data.'')
+    \item Use varied phrasing to artificially reduce representation entropy.\\
+\end{itemize}
+
+Impact: \textcolor{red}{(a new norm type will be introduced)}
+\begin{itemize}
+    \item Emergent-norm detection mechanism discussed in section 9 will create a bogus new norm type.
+\end{itemize}
+
+\subsection*{10.3  Detecting Norm-Type Drift via Multidimensional Drift Signals}
+Detecting adversarial drift should be done before updating the explicit corpus.
+
+\subsubsection*{10.3.1  Cross-Subspace Drift Coherence Test}
+Under natural drift, semantic and stance subspaces tend to drift together. \\
+
+The attack indicator is when semantic drifts without a corresponding stance drift, stance drifts without a semantic drift, or low-entropy inward drift combined with semantic outward drift. \\
+
+Formally, for each window \( t \):
+\[
+\rho_k(t) = \text{corr}\bigl(\Delta_k^{(e)}(t), \Delta_k^{(s)}(t)\bigr)
+\]
+
+If:
+\[
+\rho_k(t) < \tau_{\text{incoherence}}
+\]
+then drift likely results from adversarial manipulation (disconnected subspace shifts).
+
+\subsubsection*{10.3.2 Abrupt vs. Gradual Drift Profiling}
+Natural evolution produces smooth changes; attacks produce structural jumps. \\
+
+Compute derivative:
+\[
+\delta_k^{(*)}(t) = \Delta_k^{(*)}(t) - \Delta_k^{(*)}(t-1)
+\]
+
+Large second-order change:
+\[
+|\delta_k^{(*)}(t)| > \tau_{\text{jump}}
+\]
+signals adversarial influence.
+
+\subsubsection*{10.3.3  Density Asymmetry Detection}
+Attacks often create \emph{unnatural density concentrations}. \\
+
+For each cluster \(k\), measure density:
+\[
+D_k(t) = \frac{1}{|X_k(t)|} \sum_{x \in X_k(t)} \sum_{y \in X_k(t)} \operatorname{sim}(e(x), e(y))
+\]
+
+Density is uspicious if it inflates in a narrow cone of embedding space, but the stance and entropy distributions do not reflect a natural broadening.
+
+\subsubsection*{10.3.4  Out-of-Distribution Entropy Profiling}
+Check whether incoming sentences mapped to norm type \(k\) follow the historical entropy distribution of that type. \\
+
+Let the historical distributions be:
+\[
+P_k^{(\text{repr})},\; P_k^{(\text{mask})}.
+\]
+
+Test new sentences \(x\) for deviation:
+\[
+H_{\text{repr}}(x) \sim P_k^{(\text{repr})}\;?\quad
+H_{\text{mask}}(x) \sim P_k^{(\text{mask})}\;?
+\]
+
+Unusually low-entropy clusters with abnormally high semantic similarity might indicate an attack.
+
+\subsection*{10.4  Adversarial Pressure Estimators}
+An ``adversarial pressure'' metric for each cluster is defined as:
+\[
+\Psi_k(t) =
+\lambda_1 \Delta_k^{(e)}(t) +
+\lambda_2 \Delta_k^{(s)}(t) +
+\lambda_3 \text{OODEntropy}_k(t) +
+\lambda_4 \text{DensitySkew}_k(t)
+\]
+
+where: 
+
+\[
+\Psi_k(t)
+\]
+is a scalar score estimating adversarial pressure on norm type \(k\) during time window \(t\).
+It combines four orthogonal drift signals, each weighted by its importance. \\
+
+if:
+\[
+\Psi_k(t) > \tau_{\text{attack}}
+\]
+\textcolor{red}{(parameter to be defined according to case studies)}
+the system flags norm type \(k\) as under potential manipulation; 
+
+\[
+\lambda_1 \Delta_k^{(e)}(t)
+\]
+
+is the semantic drift contribution, measuring how far the semantic centroid of implicit sentences has moved relative to the explicit norm definition. A large \(\Delta_k^{(e)}\) indicates unusual semantic movement;
+
+\[
+\lambda_2 \Delta_k^{(s)}(t)
+\]
+
+is the tance drift contribution, measuring how much value-laden stance (approval/disapproval signals) has shifted;
+
+\[
+\lambda_3 \,\text{OODEntropy}_k(t)
+\]
+
+is the out-of-distribution entropy deviation, measuring the extent to which new implicit sentences mapped to norm type \(k\) have entropy patterns inconsistent with historical distributions
+\[
+P_k^{(\text{repr})},\quad P_k^{(\text{mask})}
+\]
+    
+High OOD deviation can indicate artificially low entropy (confidence-hacking), or artificially high entropy (confusion / contradiction injection).
+Large OODEntropy means the shape of normative meaning around the cluster is being distorted;
+
+\[
+\lambda_4 \,\text{DensitySkew}_k(t)
+\]
+
+is the density skew contribution, measuring whether embeddings within cluster \(k\) are unnaturally concentrated in a small region. This is evidence of paraphrase bombing, fake-norm emergence, or targeted injection of near-duplicate normative sentences. DensitySkew captures the shape distortion of the embedding cloud, not just centroid movement;
+
+
+\[
+\lambda_1,\lambda_2,\lambda_3,\lambda_4
+\]
+
+are weighting coefficients. These are hyperparameters controlling how strongly each signal contributes to overall adversarial pressure, allowing to adjust sensitivity based on domain risk and to prioritize different types of attacks (semantic vs stance vs entropy vs density). Weighting coefficients can be tuned through case studies, simulation, or historical real-world drift data; \\
+
+finally, the attack threshold:
+\[
+\Psi_k(t) > \tau_{\text{attack}}
+\]
+
+If the combined adversarial pressure exceeds this threshold, the system flags norm type \(k\) as potentially under manipulation. \\
+
+
+\textcolor{red}{Next steps: 
+\begin{itemize}
+    \item distinguishing "normal" nrm evolution from attack-induced drift
+    \item defensive measures
+\end{itemize}
+}
+
+
+\end{document}
